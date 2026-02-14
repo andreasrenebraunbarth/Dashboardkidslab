@@ -1,62 +1,50 @@
 // Auth Logic
 const currentUser = localStorage.getItem('currentUser');
+const authToken = localStorage.getItem('authToken');
 const path = window.location.pathname;
 
-// Simple simulation of user database - In a real app this comes from a server
-// Simple simulation of user database - In a real app this comes from a server
-const getUsers = () => JSON.parse(localStorage.getItem('registeredUsers')) || [];
-
-// Initialize default admin if no users exist
-// Initialize default admin if no Admin exists
-const users = getUsers();
-const adminExists = users.some(u => u.role === 'admin');
-
-if (!adminExists) {
-    const defaultAdmin = {
-        name: 'Admin',
-        email: 'admin@example.com',
-        password: 'admin', // Very insecure, for demo only
-        role: 'admin'
-    };
-    users.push(defaultAdmin);
-    localStorage.setItem('registeredUsers', JSON.stringify(users));
-    console.log('Default admin created because none existed: admin@example.com / admin');
-}
-
-const saveUsers = (users) => localStorage.setItem('registeredUsers', JSON.stringify(users));
-
-const addUser = (user) => {
-    const users = getUsers();
-    // Default role is 'user' if not specified
-    if (!user.role) user.role = 'user';
-    users.push(user);
-    saveUsers(users);
-};
-
-const findUser = (email) => getUsers().find(u => u.email === email);
-
-const updateUser = (email, newData) => {
-    const users = getUsers();
-    const index = users.findIndex(u => u.email === email);
-    if (index !== -1) {
-        users[index] = { ...users[index], ...newData };
-        saveUsers(users);
-        // If current user is updated, update session if needed
-        const currentUserEmail = localStorage.getItem('currentUserEmail'); // We should start tracking email for session
-        if (currentUserEmail === email && newData.name) {
-            localStorage.setItem('currentUser', newData.name);
-        }
-        return true;
+// Helper to make authenticated requests
+window.apiCall = async (endpoint, method = 'GET', body = null) => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (localStorage.getItem('authToken')) {
+        headers['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
     }
-    return false;
+
+    try {
+        const response = await fetch(`${API_URL}/api${endpoint}`, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : null
+        });
+
+        if (response.status === 401) {
+            window.logout();
+            return null;
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('API Error:', error);
+        return { error: 'Network error' };
+    }
 };
 
-// Make these available globally for the Admin Panel
 window.authSystem = {
-    getUsers,
-    addUser,
-    updateUser,
-    findUser
+    getUsers: async () => {
+        const users = await window.apiCall('/users');
+        return users || [];
+    },
+    // We don't expose full addUser/updateUser to client directly in the same way, 
+    // but we can map them to API calls
+    addUser: async (userData) => {
+        return await window.apiCall('/auth/register', 'POST', userData);
+    },
+    updateUser: async (email, data) => {
+        // Not fully implemented in backend yet for update, but placeholder
+        console.warn('Update user via API not fully implemented yet');
+        return true;
+    },
+    findUser: () => { console.warn('findUser not available in API mode (async)'); return null; }
 };
 
 // Path handling
@@ -115,7 +103,7 @@ if (authForm) {
     showRegisterBtn.addEventListener('click', () => toggleMode(true));
 
     // Handle Submit
-    authForm.addEventListener('submit', (e) => {
+    authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         errorMsg.textContent = '';
 
@@ -125,31 +113,47 @@ if (authForm) {
         if (isRegisterMode) {
             // Register Flow
             const name = nameInput.value.trim();
-            if (findUser(email)) {
-                errorMsg.textContent = 'Diese E-Mail wird bereits verwendet.';
-                return;
-            }
             if (password.length < 4) {
                 errorMsg.textContent = 'Passwort muss mindestens 4 Zeichen lang sein.';
                 return;
             }
 
-            addUser({ name, email, password, role: 'user' }); // In real app: Hash password!
-            localStorage.setItem('currentUser', name);
-            localStorage.setItem('currentUserEmail', email);
-            localStorage.setItem('currentUserRole', 'user');
-            window.location.href = 'dashboard.html';
+            const res = await fetch(`${API_URL}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password, role: 'user' })
+            });
+            const data = await res.json();
+
+            if (data.error) {
+                errorMsg.textContent = data.error;
+            } else {
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('currentUser', data.user.name);
+                localStorage.setItem('currentUserEmail', data.user.email);
+                localStorage.setItem('currentUserRole', data.user.role);
+                localStorage.setItem('currentUserId', data.user.id);
+                window.location.href = 'dashboard.html';
+            }
 
         } else {
             // Login Flow
-            const user = findUser(email);
-            if (user && user.password === password) {
-                localStorage.setItem('currentUser', user.name);
-                localStorage.setItem('currentUserEmail', user.email); // Store email for unique ID
-                localStorage.setItem('currentUserRole', user.role || 'user'); // Store role
-                window.location.href = 'dashboard.html';
+            const res = await fetch(`${API_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (data.error) {
+                errorMsg.textContent = 'Login fehlgeschlagen: ' + data.error;
             } else {
-                errorMsg.textContent = 'E-Mail oder Passwort falsch.';
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('currentUser', data.user.name);
+                localStorage.setItem('currentUserEmail', data.user.email);
+                localStorage.setItem('currentUserRole', data.user.role);
+                localStorage.setItem('currentUserId', data.user.id);
+                window.location.href = 'dashboard.html';
             }
         }
     });
@@ -160,6 +164,8 @@ window.logout = function () {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentUserEmail');
     localStorage.removeItem('currentUserRole');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUserId');
     localStorage.setItem('justLoggedOut', 'true');
     window.location.href = 'index.html';
 };
