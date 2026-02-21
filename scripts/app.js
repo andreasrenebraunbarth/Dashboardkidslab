@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adminLink.style.display = 'flex';
         const adminAddRoomSection = document.getElementById('adminAddRoomSection');
         if (adminAddRoomSection) adminAddRoomSection.style.display = 'block';
+        renderUserTable();
     }
 
     navItems.forEach(item => {
@@ -66,6 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`${API_BASE}/users`);
             const users = await response.json();
             userTableBody.innerHTML = '';
+
+            // Update stats
+            const totalUsersCount = document.getElementById('totalUsersCount');
+            if (totalUsersCount) totalUsersCount.textContent = users.length;
 
             users.forEach(user => {
                 const tr = document.createElement('tr');

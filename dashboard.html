@@ -115,42 +115,68 @@
             <div id="view-admin" class="view-section" style="display: none;">
                 <header class="top-bar">
                     <h1>Admin Panel</h1>
-                    <p>Benutzer verwalten und Rollen zuweisen.</p>
+                    <p>Hier kannst du Benutzer verwalten und Rollen zuweisen.</p>
                 </header>
-                <div class="glass-card">
-                    <h3>Benutzer hinzufügen</h3>
-                    <form id="adminAddUserForm" class="settings-form">
-                        <div class="input-group">
-                            <input type="text" id="adminName" placeholder=" " required>
-                            <label>Name</label>
-                        </div>
-                        <div class="input-group">
-                            <input type="email" id="adminEmail" placeholder=" " required>
-                            <label>E-Mail</label>
-                        </div>
-                        <div class="input-group">
-                            <input type="password" id="adminPassword" placeholder=" " required>
-                            <label>Passwort</label>
-                        </div>
-                        <div class="input-group">
-                            <select id="adminRole" class="styled-select">
-                                <option value="user">User</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn-primary">Benutzer anlegen</button>
-                    </form>
+
+                <div class="admin-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+                    <!-- User Creation Card -->
+                    <div class="glass-card">
+                        <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="8.5" cy="7" r="4"></circle>
+                                <line x1="20" y1="8" x2="20" y2="14"></line>
+                                <line x1="23" y1="11" x2="17" y2="11"></line>
+                            </svg>
+                            Neuen Benutzer anlegen
+                        </h3>
+                        <form id="adminAddUserForm" class="settings-form">
+                            <div class="input-group">
+                                <input type="text" id="adminName" placeholder=" " required>
+                                <label>Vollständiger Name</label>
+                            </div>
+                            <div class="input-group">
+                                <input type="email" id="adminEmail" placeholder=" " required>
+                                <label>E-Mail Adresse</label>
+                            </div>
+                            <div class="input-group">
+                                <input type="password" id="adminPassword" placeholder=" " required>
+                                <label>Passwort vergeben</label>
+                            </div>
+                            <div class="input-group">
+                                <select id="adminRole" class="styled-select"
+                                    style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white; appearance: none; cursor: pointer;">
+                                    <option value="user" style="background: #1e1b4b;">Standard Benutzer (User)</option>
+                                    <option value="admin" style="background: #1e1b4b;">Administrator (Admin)</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">Benutzer
+                                erstellen</button>
+                        </form>
+                    </div>
+
+                    <!-- User Stats/Overview Card (Optional/Future) -->
+                    <div class="glass-card"
+                        style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: linear-gradient(135deg, rgba(88, 28, 135, 0.2), rgba(139, 92, 246, 0.2));">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+                        <h3 id="totalUsersCount">--</h3>
+                        <p style="color: var(--text-muted);">Benutzer insgesamt registriert</p>
+                    </div>
                 </div>
+
+                <!-- User Table Section -->
                 <div class="glass-card mt-4">
-                    <h3>Benutzerliste</h3>
-                    <div class="table-responsive">
-                        <table class="user-table">
+                    <h3 style="margin-bottom: 1.5rem;">Registrierte Benutzer</h3>
+                    <div class="table-container" style="overflow-x: auto;">
+                        <table class="user-table" style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Rolle</th>
-                                    <th>Aktionen</th>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <th style="padding: 1rem;">Name</th>
+                                    <th style="padding: 1rem;">E-Mail</th>
+                                    <th style="padding: 1rem;">Rolle</th>
+                                    <th style="padding: 1rem; text-align: right;">Aktionen</th>
                                 </tr>
                             </thead>
                             <tbody id="userTableBody">

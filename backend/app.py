@@ -63,6 +63,12 @@ def register():
     role = data.get('role', 'user')
     
     conn = get_db_connection()
+    
+    # Check if any admin exists. If not, make this first user an admin.
+    admin_exists = conn.execute("SELECT 1 FROM users WHERE role = 'admin'").fetchone()
+    if not admin_exists:
+        role = 'admin'
+    
     try:
         conn.execute('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
                      (name, email, password, role))
