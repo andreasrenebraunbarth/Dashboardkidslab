@@ -2,8 +2,6 @@ const ideasList = document.getElementById('ideasList');
 const submitIdeaBtn = document.getElementById('submitIdea');
 const ideaInput = document.getElementById('ideaInput');
 
-const API_BASE = '/api';
-
 // Shared state
 let ideas = [];
 

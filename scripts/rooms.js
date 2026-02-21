@@ -3,8 +3,6 @@ const roomsList = document.getElementById('roomsList');
 const roomInput = document.getElementById('roomInput');
 const addRoomForm = document.getElementById('addRoomForm');
 
-const API_BASE = '/api';
-
 // Shared state
 let rooms = [];
 

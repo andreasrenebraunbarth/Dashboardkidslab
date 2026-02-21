@@ -2,8 +2,6 @@
 const currentUser = localStorage.getItem('currentUser');
 const path = window.location.pathname;
 
-const API_BASE = '/api';
-
 // Redirect logic
 const isDashboard = path.endsWith('dashboard.html');
 const isLogin = path.endsWith('index.html') || path.endsWith('/');

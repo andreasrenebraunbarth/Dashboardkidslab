@@ -3,7 +3,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const currentUserRole = localStorage.getItem('currentUserRole');
     const currentUserEmail = localStorage.getItem('currentUserEmail');
-    const API_BASE = '/api';
 
     // Display User Role
     const userRoleDisplay = document.getElementById('userRoleDisplay');
