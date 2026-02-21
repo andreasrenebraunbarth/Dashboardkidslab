@@ -1,11 +1,22 @@
 // Room Management Logic
-
 const roomsList = document.getElementById('roomsList');
 const roomInput = document.getElementById('roomInput');
 const addRoomForm = document.getElementById('addRoomForm');
 
-// Load rooms from localStorage
-let rooms = JSON.parse(localStorage.getItem('rooms')) || [];
+const API_BASE = '/api';
+
+// Shared state
+let rooms = [];
+
+async function loadRooms() {
+    try {
+        const response = await fetch(`${API_BASE}/rooms`);
+        rooms = await response.json();
+        renderRooms();
+    } catch (err) {
+        console.error('Failed to load rooms:', err);
+    }
+}
 
 function renderRooms() {
     if (!roomsList) return;
@@ -25,7 +36,7 @@ function renderRooms() {
 
     rooms.forEach(room => {
         const card = document.createElement('div');
-        card.className = 'glass-card room-card'; // Reuse glass-card style, maybe add specific class
+        card.className = 'glass-card room-card';
         card.style.display = 'flex';
         card.style.justifyContent = 'space-between';
         card.style.alignItems = 'center';
@@ -55,37 +66,55 @@ function renderRooms() {
     });
 }
 
-function addRoom(name) {
+async function addRoom(name) {
     if (!name) return;
-
-    const newRoom = {
-        id: Date.now(),
-        name: name,
-        timestamp: Date.now()
-    };
-
-    rooms.push(newRoom);
-    localStorage.setItem('rooms', JSON.stringify(rooms));
-    renderRooms();
+    try {
+        const response = await fetch(`${API_BASE}/rooms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (response.ok) {
+            await loadRooms();
+        }
+    } catch (err) {
+        console.error('Failed to add room:', err);
+    }
 }
 
-window.deleteRoom = function (id) {
+window.deleteRoom = async function (id) {
     if (confirm('Möchtest du diesen Raum wirklich entfernen?')) {
-        rooms = rooms.filter(r => r.id !== id);
-        localStorage.setItem('rooms', JSON.stringify(rooms));
-        renderRooms();
+        try {
+            const response = await fetch(`${API_BASE}/rooms/${id}`, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                await loadRooms();
+            }
+        } catch (err) {
+            console.error('Failed to delete room:', err);
+        }
     }
 };
 
-window.editRoom = function (id) {
+window.editRoom = async function (id) {
     const room = rooms.find(r => r.id === id);
     if (!room) return;
 
     const newName = prompt('Neuer Name für den Raum:', room.name);
     if (newName && newName.trim() !== '' && newName !== room.name) {
-        room.name = newName.trim();
-        localStorage.setItem('rooms', JSON.stringify(rooms));
-        renderRooms();
+        try {
+            const response = await fetch(`${API_BASE}/rooms/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName.trim() })
+            });
+            if (response.ok) {
+                await loadRooms();
+            }
+        } catch (err) {
+            console.error('Failed to update room:', err);
+        }
     }
 };
 
@@ -95,16 +124,19 @@ if (addRoomForm) {
         e.preventDefault();
         const name = roomInput.value.trim();
         if (name) {
-            addRoom(name);
-            roomInput.value = '';
+            addRoom(name).then(() => {
+                roomInput.value = '';
+            });
         }
     });
 }
 
-// Expose refresh function specifically for when the view becomes active
+// Expose refresh function
 window.roomSystem = {
-    renderRooms
+    renderRooms,
+    loadRooms
 };
 
-// Initial Render
-renderRooms();
+// Initial Load
+loadRooms();
+

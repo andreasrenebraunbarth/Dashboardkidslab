@@ -2,73 +2,15 @@
 const currentUser = localStorage.getItem('currentUser');
 const path = window.location.pathname;
 
-// Simple simulation of user database - In a real app this comes from a server
-// Simple simulation of user database - In a real app this comes from a server
-const getUsers = () => JSON.parse(localStorage.getItem('registeredUsers')) || [];
+const API_BASE = '/api';
 
-// Initialize default admin if no users exist
-// Initialize default admin if no Admin exists
-const users = getUsers();
-const adminExists = users.some(u => u.role === 'admin');
-
-if (!adminExists) {
-    const defaultAdmin = {
-        name: 'Admin',
-        email: 'admin@example.com',
-        password: 'admin', // Very insecure, for demo only
-        role: 'admin'
-    };
-    users.push(defaultAdmin);
-    localStorage.setItem('registeredUsers', JSON.stringify(users));
-    console.log('Default admin created because none existed: admin@example.com / admin');
-}
-
-const saveUsers = (users) => localStorage.setItem('registeredUsers', JSON.stringify(users));
-
-const addUser = (user) => {
-    const users = getUsers();
-    // Default role is 'user' if not specified
-    if (!user.role) user.role = 'user';
-    users.push(user);
-    saveUsers(users);
-};
-
-const findUser = (email) => getUsers().find(u => u.email === email);
-
-const updateUser = (email, newData) => {
-    const users = getUsers();
-    const index = users.findIndex(u => u.email === email);
-    if (index !== -1) {
-        users[index] = { ...users[index], ...newData };
-        saveUsers(users);
-        // If current user is updated, update session if needed
-        const currentUserEmail = localStorage.getItem('currentUserEmail'); // We should start tracking email for session
-        if (currentUserEmail === email && newData.name) {
-            localStorage.setItem('currentUser', newData.name);
-        }
-        return true;
-    }
-    return false;
-};
-
-// Make these available globally for the Admin Panel
-window.authSystem = {
-    getUsers,
-    addUser,
-    updateUser,
-    findUser
-};
-
-// Path handling
+// Redirect logic
 const isDashboard = path.endsWith('dashboard.html');
 const isLogin = path.endsWith('index.html') || path.endsWith('/');
 
-// Redirect logic
 if (isDashboard && !currentUser) {
     window.location.href = 'index.html';
 } else if (isLogin && currentUser) {
-    // Only redirect if NOT expecting to login again? 
-    // Usually standard behavior is to redirect to dashboard if session exists
     if (!localStorage.getItem('justLoggedOut')) {
         window.location.href = 'dashboard.html';
     } else {
@@ -90,7 +32,6 @@ if (authForm) {
 
     let isRegisterMode = false;
 
-    // Toggle Function
     const toggleMode = (register) => {
         isRegisterMode = register;
         errorMsg.textContent = '';
@@ -114,48 +55,51 @@ if (authForm) {
     showLoginBtn.addEventListener('click', () => toggleMode(false));
     showRegisterBtn.addEventListener('click', () => toggleMode(true));
 
-    // Handle Submit
-    authForm.addEventListener('submit', (e) => {
+    authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         errorMsg.textContent = '';
 
         const email = emailInput.value.trim().toLowerCase();
         const password = passwordInput.value.trim();
 
-        if (isRegisterMode) {
-            // Register Flow
-            const name = nameInput.value.trim();
-            if (findUser(email)) {
-                errorMsg.textContent = 'Diese E-Mail wird bereits verwendet.';
-                return;
-            }
-            if (password.length < 4) {
-                errorMsg.textContent = 'Passwort muss mindestens 4 Zeichen lang sein.';
-                return;
-            }
+        try {
+            if (isRegisterMode) {
+                const name = nameInput.value.trim();
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
 
-            addUser({ name, email, password, role: 'user' }); // In real app: Hash password!
-            localStorage.setItem('currentUser', name);
-            localStorage.setItem('currentUserEmail', email);
-            localStorage.setItem('currentUserRole', 'user');
-            window.location.href = 'dashboard.html';
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Registrierung fehlgeschlagen');
 
-        } else {
-            // Login Flow
-            const user = findUser(email);
-            if (user && user.password === password) {
-                localStorage.setItem('currentUser', user.name);
-                localStorage.setItem('currentUserEmail', user.email); // Store email for unique ID
-                localStorage.setItem('currentUserRole', user.role || 'user'); // Store role
+                localStorage.setItem('currentUser', data.user.name);
+                localStorage.setItem('currentUserEmail', data.user.email);
+                localStorage.setItem('currentUserRole', data.user.role);
                 window.location.href = 'dashboard.html';
+
             } else {
-                errorMsg.textContent = 'E-Mail oder Passwort falsch.';
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Login fehlgeschlagen');
+
+                localStorage.setItem('currentUser', data.name);
+                localStorage.setItem('currentUserEmail', data.email);
+                localStorage.setItem('currentUserRole', data.role);
+                window.location.href = 'dashboard.html';
             }
+        } catch (err) {
+            errorMsg.textContent = err.message;
         }
     });
 }
 
-// Logout Function
 window.logout = function () {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentUserEmail');
@@ -164,10 +108,10 @@ window.logout = function () {
     window.location.href = 'index.html';
 };
 
-// Display User Name on Dashboard
 if (isDashboard && currentUser) {
     const userDisplay = document.getElementById('userDisplay');
     if (userDisplay) {
         userDisplay.textContent = currentUser;
     }
 }
+

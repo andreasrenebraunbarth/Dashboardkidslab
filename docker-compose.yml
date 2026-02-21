@@ -1,0 +1,28 @@
+services:
+  app:
+    image: nginx:alpine
+    container_name: ideacollab-frontend
+    restart: unless-stopped
+    volumes:
+      - .:/usr/share/nginx/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - web
+    depends_on:
+      - backend
+    labels:
+      caddy: ideacollab.hackerwerkstatt.de
+      caddy.reverse_proxy: "{{upstreams 80}}"
+
+  backend:
+    build: ./backend
+    container_name: ideacollab-backend
+    restart: unless-stopped
+    volumes:
+      - ./backend/data:/app/data
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
